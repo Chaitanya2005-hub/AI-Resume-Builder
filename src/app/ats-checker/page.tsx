@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // Basic list of ATS-friendly keywords – can be expanded as needed
 const KEYWORDS = [
@@ -58,7 +59,7 @@ export default function ATSChecker() {
           <span className={score >= 70 ? "text-green-600" : "text-red-600"}>{score}%</span>
         </div>
       )}
-                <Link href="/builder"><Button className="mt-4">Back to Builder</Button></Link>
+      <Link href="/builder"><Button className="mt-4">Back to Builder</Button></Link>
     </div>
   );
 }
