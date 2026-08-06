@@ -21,7 +21,9 @@ import {
   User,
   Settings,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  Briefcase,
+  Send
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -164,6 +166,12 @@ export default function DashboardPage() {
             <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
               ATS Checker
             </Link>
+            <Link href="/dashboard/job-matching" className="text-muted-foreground hover:text-foreground">
+              Job Matching
+            </Link>
+            <Link href="/dashboard/applications" className="text-muted-foreground hover:text-foreground">
+              Tracker
+            </Link>
             <Link href="/analytics" className="text-muted-foreground hover:text-foreground">
               Analytics
             </Link>
@@ -211,9 +219,14 @@ export default function DashboardPage() {
               Manage your resumes, optimize ATS scores, and launch your job search.
             </p>
           </div>
-          <Button onClick={() => router.push('/builder')} size="lg" className="rounded-xl gap-2 font-bold shadow-lg shadow-primary/20">
-            <Plus className="h-5 w-5" /> Create New Resume
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => router.push('/dashboard/job-matching')} variant="outline" size="lg" className="rounded-xl gap-2 font-bold border-primary/30">
+              <Briefcase className="h-5 w-5 text-primary" /> Job Match & Apply
+            </Button>
+            <Button onClick={() => router.push('/builder')} size="lg" className="rounded-xl gap-2 font-bold shadow-lg shadow-primary/20">
+              <Plus className="h-5 w-5" /> Create New Resume
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -292,6 +305,9 @@ export default function DashboardPage() {
                         <DropdownMenuItem onClick={() => router.push(`/builder?id=${item.id}`)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit Content
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push('/dashboard/job-matching')}>
+                          <Briefcase className="mr-2 h-4 w-4" /> Match with Job
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
                             setRenameId(item.id);
@@ -331,7 +347,10 @@ export default function DashboardPage() {
                 <Button onClick={() => router.push(`/builder?id=${item.id}`)} variant="default" className="flex-1 rounded-lg gap-2">
                   <Edit className="h-4 w-4" /> Edit Resume
                 </Button>
-                <Button onClick={() => router.push('/ats-checker')} variant="outline" size="icon" className="rounded-lg">
+                <Button onClick={() => router.push('/dashboard/job-matching')} variant="outline" size="icon" className="rounded-lg" title="Job Match & Apply">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                </Button>
+                <Button onClick={() => router.push('/ats-checker')} variant="outline" size="icon" className="rounded-lg" title="ATS Checker">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </Button>
               </CardFooter>

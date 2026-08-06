@@ -20,6 +20,9 @@ export default function Home() {
           <Link className="text-sm font-medium hover:text-primary transition-colors hidden sm:inline-block" href="/ats-checker">
             ATS Checker
           </Link>
+          <Link className="text-sm font-medium hover:text-primary transition-colors hidden sm:inline-block" href="/dashboard/job-matching">
+            Job Matching
+          </Link>
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="/login">
             Sign In
           </Link>
@@ -88,6 +91,16 @@ export default function Home() {
                 <h3 className="text-xl font-bold">4 Distinct Templates</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Choose between Classic Modern, Executive Two-Column, Minimalist, and Creative Tech layouts with customizable fonts & color palettes.
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center space-y-4 text-center p-6 rounded-2xl border bg-card hover:shadow-xl transition-all">
+                <div className="p-3 bg-amber-500/10 rounded-xl">
+                  <BarChart2 className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold">Job Matching & Auto Apply</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Extract job requirements with AI, rank your resumes, and authorize automated application dispatch with customized cover notes.
                 </p>
               </div>
             </div>
