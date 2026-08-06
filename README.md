@@ -10,6 +10,7 @@ A powerful, AI-driven resume builder that creates professional, ATS-optimized re
 - **PDF Export**: Generate high-quality, professional PDFs instantly.
 - **Responsive Design**: Works perfectly on mobile and desktop.
 - **Theme Support**: Includes both Light and Dark modes.
+- **ATS CHECKER**: It checks the whole Generated Resume Score according to the job role.
 
 ## How to Publish to Your GitHub
 
@@ -36,10 +37,13 @@ Since this app is built in a cloud environment, you need to manually push the co
    git branch -M main
    git push -u origin main
    ```
-
+5. **To run the project**:
+   ```bash
+   npm run dev
+   ```
 ## Tech Stack
 
 - **Framework**: Next.js 15
-- **UI**: React, Tailwind CSS, ShadCN UI
-- **AI**: Genkit, Gemini 1.5 Flash
+- **UI**: React, Tailwind CSS, ShadCN UI ,
+- **AI**: Genkit, Gemini 1.5 Flash, Gemini AI
 - **PDF Generation**: html2canvas, jsPDF
