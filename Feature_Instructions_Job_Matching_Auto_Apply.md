@@ -6,7 +6,7 @@
 
 ---
 
-## 0. Objective
+## 0. Objective 
 
 Add a new capability to the existing AI Resume Builder application: **AI-driven job matching with user-instructed automated application dispatch.**
 

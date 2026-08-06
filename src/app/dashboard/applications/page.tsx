@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Mail, Globe, Clock, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Mail, Globe, Clock, CheckCircle2, XCircle, ExternalLink, Send } from 'lucide-react';
 import { JobApplication } from '@/types/job';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 export default function ApplicationsTrackerPage() {
   const { user } = useAuth();
@@ -52,15 +53,16 @@ export default function ApplicationsTrackerPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Application Tracker</h1>
-          <p className="text-muted-foreground">
-            Track the status of all your AI-dispatched applications.
-          </p>
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Application Tracker</h1>
+            <p className="text-muted-foreground">
+              Track the status of all your AI-dispatched applications.
+            </p>
+          </div>
         </div>
-      </div>
 
       <Card className="shadow-sm border-none bg-muted/30 min-h-[400px]">
         <CardHeader>
@@ -124,6 +126,7 @@ export default function ApplicationsTrackerPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

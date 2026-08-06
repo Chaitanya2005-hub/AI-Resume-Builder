@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import { FileText, User, Mail, Settings, Bell, Moon, Sun, Shield, Trash2, Save } from 'lucide-react';
+import { User, Mail, Settings, Bell, Shield, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth();
@@ -42,38 +41,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Header Bar */}
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            Resume Architect
-          </Link>
-          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-              Dashboard
-            </Link>
-            <Link href="/builder" className="text-muted-foreground hover:text-foreground">
-              Builder
-            </Link>
-            <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
-              ATS Checker
-            </Link>
-            <Link href="/settings" className="text-primary font-semibold">
-              Settings
-            </Link>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 lg:px-8 pt-8 max-w-4xl space-y-8">
+    <DashboardLayout>
+      <div className="container mx-auto px-4 lg:px-8 pt-8 max-w-4xl space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Settings className="h-8 w-8 text-primary" /> Settings & Profile
@@ -154,7 +123,7 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -4,6 +4,7 @@ export async function GET() {
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
   const rapidApiKey = process.env.RAPIDAPI_KEY || process.env.JSEARCH_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const resendKey = process.env.RESEND_API_KEY;
 
   const results: Record<string, any> = {};
 
@@ -61,6 +62,42 @@ export async function GET() {
     results.anthropic = { status: 'CONFIGURED', message: 'Anthropic API Key is configured' };
   }
 
+  // 4. Test Resend API Key (for email sending)
+  if (!resendKey || resendKey === 'YOUR_RESEND_API_KEY') {
+    results.resend = {
+      status: 'NOT_CONFIGURED',
+      message: 'Resend API Key not set. Email dispatch will use simulation mode. Get a free key at https://resend.com/',
+    };
+  } else {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'onboarding@resend.dev',
+          to: 'test@example.com',
+          subject: 'Test Email',
+          html: '<p>This is a test email to verify the Resend API key.</p>',
+        }),
+      });
+      
+      if (res.ok) {
+        results.resend = { status: 'VALID', message: 'Resend API Key is working!' };
+      } else {
+        const errorData = await res.json();
+        results.resend = {
+          status: 'ERROR',
+          message: errorData.message || `HTTP ${res.status}: Invalid key or permission denied`,
+        };
+      }
+    } catch (err: any) {
+      results.resend = { status: 'NETWORK_ERROR', message: err.message };
+    }
+  }
+
   return NextResponse.json({
     timestamp: new Date().toISOString(),
     results,
@@ -68,6 +105,7 @@ export async function GET() {
       nlpParserFallback: true,
       jobFeedFallback: true,
       memoryStoreFallback: true,
+      emailSimulationFallback: !resendKey || resendKey === 'YOUR_RESEND_API_KEY',
     },
   });
 }

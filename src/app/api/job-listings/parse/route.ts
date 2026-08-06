@@ -11,7 +11,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing jobDescription or userId' }, { status: 400 });
     }
 
+    console.log('Parsing job description, length:', jobDescription.length);
     const parsedRequirements = await parseJobDescriptionFlow(jobDescription);
+    console.log('Parsed requirements:', JSON.stringify(parsedRequirements, null, 2));
 
     const listing: JobListing = {
       userId,
@@ -24,8 +26,12 @@ export async function POST(req: Request) {
     const id = await saveJobListing(listing);
     
     return NextResponse.json({ id, ...listing });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to parse job description:', error);
-    return NextResponse.json({ error: 'Failed to parse job description' }, { status: 500 });
+    const errorMessage = error?.message || 'Failed to parse job description';
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+    }, { status: 500 });
   }
 }

@@ -7,6 +7,11 @@ import { AuthProvider } from '@/context/AuthContext';
 export const metadata: Metadata = {
   title: 'AI Resume Architect | Build Your Future',
   description: 'Create professional, AI-optimized, ATS-friendly resumes in minutes with Resume Architect.',
+  icons: {
+    icon: '/favicon.jpg',
+    shortcut: '/favicon.jpg',
+    apple: '/favicon.jpg',
+  },
 };
 
 export default function RootLayout({

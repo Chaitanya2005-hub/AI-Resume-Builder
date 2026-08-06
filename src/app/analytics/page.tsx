@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { FileText, BarChart2, CheckCircle2, AlertTriangle, ArrowUpRight, Award, ShieldCheck, Zap, Layers } from 'lucide-react';
+import { BarChart2, CheckCircle2, AlertTriangle, ArrowUpRight, Award, ShieldCheck, Zap, Layers } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 export default function AnalyticsPage() {
   const completenessSections = [
@@ -25,38 +24,8 @@ export default function AnalyticsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Header Bar */}
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            Resume Architect
-          </Link>
-          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-              Dashboard
-            </Link>
-            <Link href="/builder" className="text-muted-foreground hover:text-foreground">
-              Builder
-            </Link>
-            <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
-              ATS Checker
-            </Link>
-            <Link href="/analytics" className="text-primary font-semibold">
-              Analytics
-            </Link>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 lg:px-8 pt-8 max-w-6xl space-y-8">
+    <DashboardLayout>
+      <div className="container mx-auto px-4 lg:px-8 pt-8 max-w-6xl space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -66,11 +35,9 @@ export default function AnalyticsPage() {
               Detailed breakdown of formatting health, keyword match density, and section completeness.
             </p>
           </div>
-          <Link href="/builder">
-            <Button size="lg" className="rounded-xl gap-2 font-bold shadow-lg shadow-primary/20">
-              <Zap className="h-4 w-4" /> Optimize Resume Now
-            </Button>
-          </Link>
+          <Button onClick={() => window.location.href = '/builder'} size="lg" className="rounded-xl gap-2 font-bold shadow-lg shadow-primary/20">
+            <Zap className="h-4 w-4" /> Optimize Resume Now
+          </Button>
         </div>
 
         {/* Top Summary Stats */}
@@ -165,7 +132,7 @@ export default function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

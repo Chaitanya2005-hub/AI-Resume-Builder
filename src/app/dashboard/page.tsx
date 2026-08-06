@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Plus,
@@ -18,12 +17,10 @@ import {
   CheckCircle,
   ExternalLink,
   Layers,
-  User,
-  Settings,
-  LogOut,
   FolderOpen,
   Briefcase,
-  Send
+  Send,
+  Settings
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -34,7 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { DashboardLayout } from '@/components/dashboard-layout';
 
 export interface DashboardResumeItem {
   id: string;
@@ -73,7 +70,7 @@ const INITIAL_RESUMES: DashboardResumeItem[] = [
 ];
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -146,69 +143,8 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      {/* Header Bar */}
-      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            Resume Architect
-          </Link>
-          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-            <Link href="/dashboard" className="text-primary font-semibold">
-              Dashboard
-            </Link>
-            <Link href="/builder" className="text-muted-foreground hover:text-foreground">
-              Builder
-            </Link>
-            <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
-              ATS Checker
-            </Link>
-            <Link href="/dashboard/job-matching" className="text-muted-foreground hover:text-foreground">
-              Job Matching
-            </Link>
-            <Link href="/dashboard/applications" className="text-muted-foreground hover:text-foreground">
-              Tracker
-            </Link>
-            <Link href="/analytics" className="text-muted-foreground hover:text-foreground">
-              Analytics
-            </Link>
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2">
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                  {user?.name ? user.name[0].toUpperCase() : 'U'}
-                </div>
-                <span className="hidden sm:inline-block text-sm font-medium">{user?.name || 'Account'}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" /> Settings & Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/analytics')}>
-                <BarChart2 className="mr-2 h-4 w-4" /> ATS Analytics
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={async () => {
-                await logout();
-                toast({ title: 'Signed Out', description: 'You have been signed out successfully.' });
-              }}>
-                <LogOut className="mr-2 h-4 w-4 text-red-500" /> Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="container mx-auto px-4 lg:px-8 pt-8 max-w-7xl">
+    <DashboardLayout>
+      <div className="container mx-auto px-4 lg:px-8 pt-8 max-w-7xl">
         {/* Welcome Section & Quick Stats */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -302,6 +238,12 @@ export default function DashboardPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push('/settings')}>
+                          <Settings className="mr-2 h-4 w-4" /> Settings & Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push('/analytics')}>
+                          <BarChart2 className="mr-2 h-4 w-4" /> ATS Analytics
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push(`/builder?id=${item.id}`)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit Content
                         </DropdownMenuItem>
@@ -357,7 +299,7 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
-      </main>
+      </div>
 
       {/* Rename Dialog */}
       <Dialog open={!!renameId} onOpenChange={() => setRenameId(null)}>
@@ -377,6 +319,6 @@ export default function DashboardPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { DashboardLayout } from '@/components/dashboard-layout';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -294,53 +297,35 @@ export default function BuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="px-4 lg:px-8 h-16 flex items-center border-b bg-background/95 backdrop-blur sticky top-0 z-50 justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
-              <FileText className="h-5 w-5" />
-            </div>
-            Resume Architect
-          </Link>
-          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
-              Dashboard
-            </Link>
-            <Link href="/builder" className="text-primary font-semibold">
-              Builder
-            </Link>
-            <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
-              ATS Checker
-            </Link>
-          </nav>
+    <DashboardLayout>
+      <div className="container mx-auto px-4 lg:px-8 pt-8 max-w-7xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Resume Builder</h1>
+          <p className="text-muted-foreground">Create and optimize your professional resume with AI assistance.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="container mx-auto px-4 pt-6 max-w-7xl">
-        {/* Top Controls: Template & Styling Selector Bar */}
-        <Card className="mb-6 border shadow-sm bg-card">
-          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-4">
-              {/* Template Picker */}
+        {/* Template & Style Controls */}
+        <Card className="border shadow-sm mb-6">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Layout className="text-primary h-5 w-5" /> Template & Style
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Template Selection */}
               <div className="flex items-center gap-2">
-                <Layout className="h-4 w-4 text-primary" />
+                <Palette className="h-4 w-4 text-primary" />
                 <span className="text-xs font-bold uppercase">Template:</span>
                 <Select value={templateId} onValueChange={(v) => setTemplateId(v as TemplateId)}>
                   <SelectTrigger className="w-[140px] h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="classic">Classic Modern</SelectItem>
-                    <SelectItem value="executive">Executive Two-Col</SelectItem>
+                    <SelectItem value="classic">Classic</SelectItem>
+                    <SelectItem value="executive">Executive</SelectItem>
                     <SelectItem value="minimalist">Minimalist</SelectItem>
-                    <SelectItem value="tech">Creative Tech</SelectItem>
+                    <SelectItem value="tech">Tech Modern</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -348,9 +333,9 @@ export default function BuilderPage() {
               {/* Color Theme */}
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4 text-primary" />
-                <span className="text-xs font-bold uppercase">Theme:</span>
+                <span className="text-xs font-bold uppercase">Color:</span>
                 <Select value={colorTheme} onValueChange={(v) => setColorTheme(v as ColorTheme)}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs">
+                  <SelectTrigger className="w-[140px] h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -782,13 +767,13 @@ export default function BuilderPage() {
             />
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Floating AI Assistant Drawer */}
       <AIAssistantPanel
         onApplySummary={(sum) => form.setValue('professionalSummary', sum)}
         onApplySkills={(skillsList) => form.setValue('skills.technical', skillsList.join(', '))}
       />
-    </div>
+    </DashboardLayout>
   );
 }

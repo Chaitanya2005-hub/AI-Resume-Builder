@@ -39,7 +39,7 @@ export function fallbackParseJobDescription(text: string): JobRequirement {
   ];
 
   const foundSkills = skillKeywords.filter(skill => 
-    new RegExp(`\\b${skill.replace('.', '\\.')}\\b`, 'i').test(text)
+    new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)
   );
 
   if (foundSkills.length === 0) {
@@ -68,6 +68,15 @@ export const parseJobDescriptionFlow = ai.defineFlow(
     outputSchema: JobRequirementSchema,
   },
   async (jobDescription) => {
+    console.log('[parseJobDescriptionFlow] Starting parse, job description length:', jobDescription.length);
+    
+    // Check if API key is configured
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!geminiKey || geminiKey.startsWith('AQ.') || geminiKey === 'YOUR_GEMINI_API_KEY') {
+      console.warn('[parseJobDescriptionFlow] No valid Gemini API key, using fallback parser');
+      return fallbackParseJobDescription(jobDescription);
+    }
+
     try {
       const response = await ai.generate({
         prompt: `You are an expert HR recruiter and ATS software engineer. 
@@ -81,11 +90,13 @@ ${jobDescription}`,
       });
 
       if (response.output) {
+        console.log('[parseJobDescriptionFlow] AI parsing successful');
         return response.output;
       }
+      console.warn('[parseJobDescriptionFlow] AI returned no output, using fallback');
       return fallbackParseJobDescription(jobDescription);
     } catch (err) {
-      console.warn('AI job description parse failed, falling back to NLP extractor:', err);
+      console.warn('[parseJobDescriptionFlow] AI job description parse failed, falling back to NLP extractor:', err);
       return fallbackParseJobDescription(jobDescription);
     }
   }

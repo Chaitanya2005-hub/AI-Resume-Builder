@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Briefcase, FileText, CheckCircle2, XCircle, Globe, Link2 } from 'lucide-react';
+import { Loader2, Search, Briefcase, FileText, CheckCircle2, XCircle, Globe, Link2, Mail, Zap } from 'lucide-react';
 import { MatchPreviewModal } from '@/components/job-matching/MatchPreviewModal';
+import { DashboardLayout } from '@/components/dashboard-layout';
 import { DashboardResumeItem } from '../page';
 
 export default function JobMatchingPage() {
@@ -34,15 +36,35 @@ export default function JobMatchingPage() {
 
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [autoApply, setAutoApply] = useState(false);
+  const [senderEmail, setSenderEmail] = useState(user?.email || '');
 
   useEffect(() => {
     const stored = localStorage.getItem('ai_resumes_list');
+    console.log('[Job Matching] Loading resumes from localStorage:', !!stored);
     if (stored) {
       try {
-        setResumes(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        console.log('[Job Matching] Parsed resumes:', parsed);
+        setResumes(parsed);
       } catch (e) {
-        console.error('Failed to parse resumes from local storage');
+        console.error('[Job Matching] Failed to parse resumes from local storage:', e);
       }
+    } else {
+      console.log('[Job Matching] No resumes found in localStorage, using initial data');
+      // Add sample resumes for testing
+      const sampleResumes = [
+        {
+          id: 'sample_1',
+          title: 'Sample Software Engineer Resume',
+          targetRole: 'Full Stack Developer',
+          lastModified: 'Just now',
+          atsScore: 85,
+          templateId: 'tech' as const,
+        }
+      ];
+      setResumes(sampleResumes);
+      localStorage.setItem('ai_resumes_list', JSON.stringify(sampleResumes));
     }
   }, []);
 
@@ -112,28 +134,43 @@ export default function JobMatchingPage() {
   };
 
   const handleParseJob = async () => {
+    console.log('[handleParseJob] Starting...', { jobDescriptionLength: jobDescription.length, userId: user?.id });
+    toast({ title: 'Debug', description: 'Starting job analysis...' });
+    
     if (!jobDescription.trim()) {
       toast({ title: 'Error', description: 'Please enter a job description or URL', variant: 'destructive' });
       return;
     }
-    if (!user) return;
+    if (!user) {
+      console.log('[handleParseJob] No user found');
+      toast({ title: 'Error', description: 'User not authenticated', variant: 'destructive' });
+      return;
+    }
 
     setIsParsing(true);
     try {
+      console.log('[handleParseJob] Calling parse API...');
+      toast({ title: 'Debug', description: 'Parsing job description...' });
+      
       const res = await fetch('/api/job-listings/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobDescription, userId: user.id, source: jobUrl ? 'url' : 'manual' }),
       });
       const data = await res.json();
+      console.log('[handleParseJob] Parse response:', { ok: res.ok, data });
+      
       if (res.ok) {
         setParsedJob(data);
         toast({ title: 'Success', description: 'Job description parsed successfully.' });
+        console.log('[handleParseJob] Calling computeMatches...');
+        toast({ title: 'Debug', description: 'Computing resume matches...' });
         computeMatches(data);
       } else {
         throw new Error(data.error);
       }
     } catch (error: any) {
+      console.error('[handleParseJob] Error:', error);
       toast({ title: 'Error', description: error.message || 'Failed to parse job description.', variant: 'destructive' });
     } finally {
       setIsParsing(false);
@@ -141,7 +178,20 @@ export default function JobMatchingPage() {
   };
 
   const computeMatches = async (jobListing: any) => {
-    if (!user || resumes.length === 0) return;
+    console.log('[computeMatches] Starting...', { user: !!user, resumesCount: resumes.length });
+    
+    if (!user) {
+      console.log('[computeMatches] Early return - no user');
+      toast({ title: 'Error', description: 'User not authenticated', variant: 'destructive' });
+      return;
+    }
+    
+    if (resumes.length === 0) {
+      console.log('[computeMatches] Early return - no resumes');
+      toast({ title: 'Error', description: 'No resumes available. Please create a resume first.', variant: 'destructive' });
+      return;
+    }
+    
     setIsMatching(true);
     setMatches([]);
     
@@ -174,26 +224,171 @@ export default function JobMatchingPage() {
       // Sort by highest score
       computedMatches.sort((a, b) => b.matchScore - a.matchScore);
       setMatches(computedMatches);
+
+      // Auto-apply if enabled and we have matches
+      console.log('[Auto-Apply Check]', { autoApply, matchesCount: computedMatches.length, senderEmail: !!senderEmail });
+      if (autoApply && computedMatches.length > 0 && senderEmail) {
+        console.log('[Auto-Apply] Triggering auto-apply...');
+        toast({ title: 'Auto-Apply Starting', description: 'Tailoring resume and sending application...' });
+        await autoApplyToJobs(computedMatches, jobListing);
+      } else {
+        console.log('[Auto-Apply] Skipped - conditions not met');
+        if (autoApply) {
+          if (!senderEmail) {
+            toast({ title: 'Auto-Apply Skipped', description: 'Please enter your email address for auto-apply', variant: 'destructive' });
+          } else if (computedMatches.length === 0) {
+            toast({ title: 'Auto-Apply Skipped', description: 'No resumes available to match', variant: 'destructive' });
+          }
+        }
+      }
     } catch (error) {
+      console.error('[Auto-Apply] Error in computeMatches:', error);
       toast({ title: 'Error', description: 'Failed to compute matches.', variant: 'destructive' });
     } finally {
       setIsMatching(false);
     }
   };
 
-  const handleOpenPreview = (match: any) => {
+  const autoApplyToJobs = async (matches: any[], jobListing: any) => {
+    console.log('[Auto-Apply] Starting auto-apply process...', { matchesCount: matches.length });
+    const bestMatch = matches[0]; // Apply with the best matching resume
+    console.log('[Auto-Apply] Best match:', { score: bestMatch?.matchScore, resumeId: bestMatch?.resume?.id });
+    
+    if (!bestMatch || bestMatch.matchScore < 70) {
+      console.log('[Auto-Apply] Skipped - score below 70 or no match');
+      toast({ 
+        title: 'Auto-Apply Skipped', 
+        description: 'Best match score below 70%. Review manually before applying.', 
+        variant: 'default' 
+      });
+      return;
+    }
+
+    if (!user) {
+      console.log('[Auto-Apply] Skipped - user not authenticated');
+      toast({ title: 'Error', description: 'User not authenticated', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      // Try to extract company email from job listing
+      const targetEmail = extractCompanyEmail(jobListing.originalText) || 'careers@company.com';
+      console.log('[Auto-Apply] Target email:', targetEmail);
+      
+      // Fetch resume data
+      let resumeData: any = null;
+      try {
+        const storedResumes = localStorage.getItem('ai_resumes_data');
+        if (storedResumes) {
+          const resumesData = JSON.parse(storedResumes);
+          resumeData = resumesData[bestMatch.resume.id];
+          console.log('[Auto-Apply] Resume data found:', !!resumeData);
+        }
+      } catch (e) {
+        console.warn('[Auto-Apply] Could not fetch resume data:', e);
+      }
+
+      console.log('[Auto-Apply] Calling dispatch API...');
+      const res = await fetch('/api/applications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          resumeId: bestMatch.resume.id,
+          resumeText: `Title: ${bestMatch.resume.title}\nTarget Role: ${bestMatch.resume.targetRole}`,
+          resumeData,
+          jobListingId: jobListing.id,
+          targetEmail,
+          senderEmail: senderEmail.trim(),
+          matchScore: bestMatch.matchScore,
+          dispatchChannel: 'EMAIL',
+          confirm: true,
+        }),
+      });
+
+      const data = await res.json();
+      console.log('[Auto-Apply] Dispatch response:', { status: res.status, data });
+      
+      if (res.ok) {
+        console.log('[Auto-Apply] Success!');
+        toast({ 
+          title: 'Auto-Apply Successful!', 
+          description: `Application sent to ${targetEmail} with ${bestMatch.matchScore}% match score.` 
+        });
+      } else {
+        console.log('[Auto-Apply] Failed:', data);
+        toast({ 
+          title: 'Auto-Apply Failed', 
+          description: data.error || 'Failed to send application automatically.', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('[Auto-Apply] Exception:', error);
+      toast({ 
+        title: 'Auto-Apply Error', 
+        description: 'Failed to send automatic application.', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const extractCompanyEmail = (text: string): string | null => {
+    // List of common company email patterns to prioritize
+    const companyEmailPatterns = [
+      /careers@[\w.-]+\.[a-z]{2,}/gi,
+      /jobs@[\w.-]+\.[a-z]{2,}/gi,
+      /hr@[\w.-]+\.[a-z]{2,}/gi,
+      /recruiting@[\w.-]+\.[a-z]{2,}/gi,
+      /recruitment@[\w.-]+\.[a-z]{2,}/gi,
+      /talent@[\w.-]+\.[a-z]{2,}/gi,
+      /hiring@[\w.-]+\.[a-z]{2,}/gi,
+      /apply@[\w.-]+\.[a-z]{2,}/gi,
+      /people@[\w.-]+\.[a-z]{2,}/gi,
+    ];
+
+    // First try to find company-specific email patterns
+    for (const pattern of companyEmailPatterns) {
+      const matches = text.match(pattern);
+      if (matches && matches.length > 0) {
+        return matches[0];
+      }
+    }
+
+    // Fallback: any non-personal email
+    const emailRegex = /[a-zA-Z0-9._%+-]+@(?!gmail|yahoo|hotmail|outlook|aol|icloud|protonmail)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi;
+    const matches = text.match(emailRegex);
+    return matches && matches.length > 0 ? matches[0] : null;
+  };
+
+  const handleOpenPreview = async (match: any) => {
     setSelectedMatch(match);
+    
+    // Try to fetch full resume data from localStorage
+    let resumeData: any = null;
+    try {
+      const storedResumes = localStorage.getItem('ai_resumes_data');
+      if (storedResumes) {
+        const resumesData = JSON.parse(storedResumes);
+        resumeData = resumesData[match.resume.id];
+      }
+    } catch (e) {
+      console.warn('Could not fetch resume data:', e);
+    }
+    
+    setSelectedMatch({ ...match, resumeData });
     setPreviewModalOpen(true);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">AI Job Matching</h1>
-        <p className="text-muted-foreground">
-          Paste a job description to see which of your resumes is the best fit, and auto-tailor an application.
-        </p>
-      </div>
+    <DashboardLayout>
+      <div className="container mx-auto px-4 lg:px-8 py-8 max-w-6xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">AI Job Matching</h1>
+          <p className="text-muted-foreground">
+            Paste a job description to see which of your resumes is the best fit, and auto-tailor an application.
+          </p>
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Input */}
@@ -206,6 +401,36 @@ export default function JobMatchingPage() {
               <CardDescription>Search live job boards (LinkedIn, Indeed, Glassdoor) or paste URL/text</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Auto-Apply Settings */}
+              <div className="space-y-3 bg-gradient-to-r from-primary/5 to-primary/10 p-4 rounded-xl border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-semibold text-foreground">Auto-Apply Mode</label>
+                  </div>
+                  <Switch 
+                    checked={autoApply}
+                    onCheckedChange={setAutoApply}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Automatically tailor and email your resume to companies after matching (70%+ score required)
+                </p>
+                {autoApply && (
+                  <div className="pt-2 border-t border-primary/20">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                      <Input
+                        placeholder="your.email@example.com"
+                        value={senderEmail}
+                        onChange={(e) => setSenderEmail(e.target.value)}
+                        className="text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Search Live Job Platforms */}
               <div className="space-y-2 bg-muted/40 p-3 rounded-xl border">
                 <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -427,6 +652,7 @@ export default function JobMatchingPage() {
           </Card>
         </div>
       </div>
+      </div>
 
       {selectedMatch && (
         <MatchPreviewModal
@@ -435,9 +661,10 @@ export default function JobMatchingPage() {
           jobListingId={parsedJob?.id}
           resumeId={selectedMatch.resume.id}
           resumeText={`Title: ${selectedMatch.resume.title}\nTarget Role: ${selectedMatch.resume.targetRole}`}
+          resumeData={selectedMatch.resumeData}
           matchScore={selectedMatch.matchScore}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

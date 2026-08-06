@@ -12,6 +12,7 @@ interface MatchPreviewModalProps {
   jobListingId: string;
   resumeId: string;
   resumeText: string;
+  resumeData?: any;
   matchScore: number;
 }
 
@@ -21,6 +22,7 @@ export function MatchPreviewModal({
   jobListingId,
   resumeId,
   resumeText,
+  resumeData,
   matchScore,
 }: MatchPreviewModalProps) {
   const { user } = useAuth();
@@ -44,6 +46,7 @@ export function MatchPreviewModal({
           userId: user.id,
           resumeId,
           resumeText,
+          resumeData,
           jobListingId,
           targetEmail: targetEmail.trim(),
           senderEmail: senderEmail.trim(),
@@ -58,10 +61,10 @@ export function MatchPreviewModal({
       if (res.ok) {
         setDispatchResult({ 
           success: true, 
-          message: `Application dispatched from ${senderEmail} to ${targetEmail}!`, 
-          coverNote: data.tailoredContent.coverNote 
+          message: data.message || `Application dispatched from ${senderEmail} to ${targetEmail}!`, 
+          coverNote: data.tailoredContent?.coverNote 
         });
-        toast({ title: 'Success', description: 'Application has been sent.' });
+        toast({ title: 'Success', description: data.message || 'Application has been sent.' });
       } else {
         setDispatchResult({ success: false, message: data.error || 'Dispatch failed' });
         toast({ title: 'Error', description: data.error || 'Failed to dispatch', variant: 'destructive' });
