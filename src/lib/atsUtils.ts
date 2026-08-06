@@ -1,4 +1,5 @@
 // ATS utility functions
+import { marked } from 'marked';
 export const KEYWORDS = [
   "lead",
   "manage",
@@ -100,8 +101,5 @@ export function generateResume(data: ResumeData): string {
  * This function is optional and only imported when needed to avoid extra bundle size.
  */
 export function markdownToHtml(md: string): string {
-  // Lazy load to keep the import optional
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { marked } = require('marked');
-  return marked(md);
+  return marked.parse(md, { async: false }) as string;
 }

@@ -1,23 +1,34 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import React, { useState } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
-import { 
-  FileText, 
-  User, 
-  Briefcase, 
-  GraduationCap, 
-  Sparkles, 
+import {
+  FileText,
+  User,
+  Briefcase,
+  GraduationCap,
+  Sparkles,
   Download,
   Plus,
   Trash2,
   Loader2,
   Wand2,
-  ChevronLeft,
-  ChevronRight
+  Code,
+  Award,
+  Globe,
+  BookOpen,
+  CheckCircle,
+  Layout,
+  Palette,
+  Type,
+  Users,
+  Heart,
+  ShieldCheck,
+  Camera,
+  X
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -25,23 +36,29 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calculateScore, generatePlainText, KEYWORDS } from '@/lib/atsUtils';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateResumeContent } from '@/ai/flows/generate-resume-content-flow';
-import type { GenerateResumeContentOutput } from '@/ai/flows/generate-resume-content-flow';
 import ResumePreview from '@/components/resume-preview';
+import AIAssistantPanel from '@/components/ai-assistant-panel';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { TemplateId, ColorTheme, FontStyle } from '@/types/resume';
 
 const resumeFormSchema = z.object({
   magicPrompt: z.string().optional(),
   personalInfo: z.object({
     name: z.string().optional(),
-    email: z.string().email('Invalid email').optional().or(z.literal('')),
+    jobTitle: z.string().optional(),
+    email: z.string().optional(),
     phone: z.string().optional(),
-    linkedin: z.string().url().optional().or(z.literal('')),
-    portfolio: z.string().url().optional().or(z.literal('')),
+    location: z.string().optional(),
+    linkedin: z.string().optional(),
+    github: z.string().optional(),
+    portfolio: z.string().optional(),
+    photoUrl: z.string().optional(),
   }),
   professionalSummary: z.string().optional(),
   education: z.array(z.object({
@@ -49,9 +66,14 @@ const resumeFormSchema = z.object({
     degree: z.string().optional(),
     fieldOfStudy: z.string().optional(),
     graduationDate: z.string().optional(),
+    gpa: z.string().optional(),
     achievements: z.string().optional(),
   })),
-  skills: z.array(z.string()).optional(),
+  skills: z.object({
+    technical: z.string().optional(),
+    soft: z.string().optional(),
+    tools: z.string().optional(),
+  }),
   experience: z.array(z.object({
     title: z.string().optional(),
     company: z.string().optional(),
@@ -64,7 +86,29 @@ const resumeFormSchema = z.object({
     name: z.string().optional(),
     description: z.string().optional(),
     technologies: z.string().optional(),
-    url: z.string().url().optional().or(z.literal('')),
+    url: z.string().optional(),
+  })),
+  certifications: z.array(z.object({
+    name: z.string().optional(),
+    issuer: z.string().optional(),
+    issueDate: z.string().optional(),
+    credentialUrl: z.string().optional(),
+  })),
+  languages: z.array(z.object({
+    language: z.string().optional(),
+    proficiency: z.string().optional(),
+  })),
+  achievements: z.array(z.object({
+    title: z.string().optional(),
+    issuer: z.string().optional(),
+    description: z.string().optional(),
+  })),
+  interests: z.string().optional(),
+  references: z.array(z.object({
+    name: z.string().optional(),
+    title: z.string().optional(),
+    company: z.string().optional(),
+    email: z.string().optional(),
   })),
   jobDescription: z.string().optional(),
 });
@@ -72,90 +116,160 @@ const resumeFormSchema = z.object({
 type ResumeFormValues = z.infer<typeof resumeFormSchema>;
 
 export default function BuilderPage() {
-  const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<'magic' | 'manual'>('magic');
+  const [mode, setMode] = useState<'magic' | 'manual'>('manual');
+  const [templateId, setTemplateId] = useState<TemplateId>('enhancv');
+  const [colorTheme, setColorTheme] = useState<ColorTheme>('royal');
+  const [fontStyle, setFontStyle] = useState<FontStyle>('inter');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [optimizedResume, setOptimizedResume] = useState<GenerateResumeContentOutput | null>(null);
-  const [atsScore, setAtsScore] = useState<number | null>(null);
+  const [optimizedResume, setOptimizedResume] = useState<any | null>(null);
+  const [atsScore, setAtsScore] = useState<number | null>(92);
   const { toast } = useToast();
 
   const form = useForm<ResumeFormValues>({
     resolver: zodResolver(resumeFormSchema),
     defaultValues: {
       magicPrompt: '',
-      personalInfo: { name: '', email: '', phone: '', linkedin: '', portfolio: '' },
-      professionalSummary: '',
-      education: [{ institution: '', degree: '', fieldOfStudy: '', graduationDate: '', achievements: '' }],
-      experience: [{ title: '', company: '', location: '', startDate: '', endDate: '', description: '' }],
-      projects: [{ name: '', description: '', technologies: '', url: '' }],
-      skills: [''],
+      personalInfo: {
+        name: 'KARRI SRI CHAITANYA',
+        jobTitle: 'Full-Stack & AI Engineer',
+        email: 'karrisrichaitanya@gmail.com',
+        phone: '8106057288',
+        location: 'Vizianagaram',
+        linkedin: 'http://www.linkedin.com/in/karri-sri-chaitanya-268149354',
+        github: 'https://github.com/Chaitanya2005-hub',
+        portfolio: '',
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      },
+      professionalSummary:
+        'Computer Science Engineering student passionate about Full-Stack Development, AI, and Software Engineering. Experienced in Angular, Java, Spring Boot, MySQL, and building real-world projects with a strong focus on problem-solving and continuous learning.\n\nComputer Science Engineering student specializing in Full-Stack and AI development, with hands-on experience in Angular, Java, Spring Boot, and MySQL. Proven ability to design and deploy secure, scalable applications.',
+      education: [
+        {
+          institution: 'Centurion University: Best Private University in Vizianagaram, AP',
+          degree: 'Bachelor of Technology',
+          fieldOfStudy: 'Computer Science Engineering',
+          graduationDate: '08/2024 - 08/2028',
+          gpa: '8.8',
+          achievements: 'President of AI Club, Top 5% Academic Ranking',
+        },
+        {
+          institution: 'Sri Chaitanya College of Education',
+          degree: 'Intermediate',
+          graduationDate: '03/2021 - 03/2023',
+        },
+      ],
+      experience: [
+        {
+          title: 'Python Intern',
+          company: 'VaultofCodes',
+          location: 'Remote',
+          startDate: '05/2025',
+          endDate: '07/2025',
+          description: '• I have accomplished the whole project by using Python algorithms and backend data automation.',
+        },
+        {
+          title: 'Python Developer',
+          company: 'Google',
+          location: 'Remote',
+          startDate: '08/2025',
+          endDate: '07/2025',
+          description: '• Highlight your accomplishments, using numbers if possible to quantify system optimizations.',
+        },
+      ],
+      projects: [
+        {
+          name: 'Diabetes Prediction System',
+          description:
+            'A machine learning application that predicts diabetes risk using healthcare datasets and predictive analytics.\n• Cleaned and preprocessed real-world healthcare data.\n• Implemented Logistic Regression for disease prediction.\n• Evaluated model performance using standard ML metrics.',
+          technologies: 'Python, Scikit-Learn, Machine Learning, Pandas',
+        },
+        {
+          name: 'AI Resume Builder',
+          description:
+            'A web-based application that uses AI to generate professional, ATS-friendly resumes from user-provided information.\n• Developed an intuitive interface for resume creation.\n• Generated structured resumes using AI assistance.\n• Created modern and ATS-friendly resume layouts.',
+          technologies: 'Next.js, TypeScript, Genkit AI, TailwindCSS',
+        },
+      ],
+      skills: {
+        technical: 'Java, Python, C, C++, HTML, AWS',
+        soft: 'Problem Solving, Quick Learner, Team Collaboration, Adaptability',
+        tools: 'MySQL, Spring Boot, Angular, Git, VS Code',
+      },
+      certifications: [
+        {
+          name: 'Cloud Infrastructure Analyst',
+          issuer: 'SkillIndia',
+        },
+        {
+          name: 'Java',
+          issuer: 'GeeksforGeeks',
+        },
+        {
+          name: 'Software Test Engineer',
+          issuer: 'SkillIndia',
+        },
+        {
+          name: 'Ethical Hacking',
+          issuer: 'Cisco',
+        },
+      ],
+      languages: [
+        { language: 'English', proficiency: 'Advanced' },
+        { language: 'Telugu', proficiency: 'Native' },
+        { language: 'Hindi', proficiency: 'Proficient' },
+        { language: 'Oriya', proficiency: 'Advanced' },
+      ],
+      achievements: [
+        {
+          title: 'GenAI Exchange Hackathon',
+          issuer: 'Hack2skill',
+          description: 'Participated in the hackathon and gained industrial experience in AI application development.',
+        },
+      ],
+      interests: 'Machine Learning, Open Source, Problem Solving',
+      references: [],
       jobDescription: '',
     },
   });
 
-  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
-    control: form.control,
-    name: 'education',
-  });
-
-  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
-    control: form.control,
-    name: 'experience',
-  });
+  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: 'education' });
+  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control: form.control, name: 'experience' });
+  const { fields: projFields, append: appendProj, remove: removeProj } = useFieldArray({ control: form.control, name: 'projects' });
+  const { fields: certFields, append: appendCert, remove: removeCert } = useFieldArray({ control: form.control, name: 'certifications' });
+  const { fields: langFields, append: appendLang, remove: removeLang } = useFieldArray({ control: form.control, name: 'languages' });
 
   const onSubmit = async (data: ResumeFormValues) => {
     setIsGenerating(true);
     try {
       let processedData;
       if (mode === 'magic') {
-        processedData = {
-          rawInput: data.magicPrompt,
-          jobDescription: data.jobDescription,
-        };
+        processedData = { rawInput: data.magicPrompt, jobDescription: data.jobDescription };
       } else {
         processedData = {
           ...data,
-          projects: data.projects.map(p => ({
-            ...p,
-            technologies: p.technologies ? p.technologies.split(',').map(t => t.trim()) : [],
-          })),
-          skills: data.skills?.filter(s => s.trim() !== '') || [],
+          skills: [
+            ...(data.skills.technical ? data.skills.technical.split(',').map((s) => s.trim()) : []),
+            ...(data.skills.tools ? data.skills.tools.split(',').map((s) => s.trim()) : []),
+            ...(data.skills.soft ? data.skills.soft.split(',').map((s) => s.trim()) : []),
+          ],
         };
       }
 
       const result = await generateResumeContent(processedData as any);
-
-      // --- ATS processing ----------------------------------------------------
-      // Generate plain text representation of the resume
       const plainText = generatePlainText(result);
       const score = calculateScore(plainText);
-      let adjustedResume = { ...result };
 
-      // If score is below a threshold, inject missing keywords into skills and summary
-      if (score < 70) {
-        const missing = KEYWORDS.filter((kw) => !plainText.toLowerCase().includes(kw));
-        // Add missing keywords to skills (avoid duplicates)
-        const existingSkills = Array.isArray(adjustedResume.skills) ? adjustedResume.skills : [];
-        adjustedResume.skills = Array.from(new Set([...existingSkills, ...missing]));
-        // Append missing keywords to professional summary for better coverage
-        const extraSummary = missing.join(' ');
-        adjustedResume.professionalSummary =
-          (adjustedResume.professionalSummary || '') + (adjustedResume.professionalSummary ? ' ' : '') + extraSummary;
-      }
-
-      setOptimizedResume(adjustedResume);
+      setOptimizedResume(result);
       setAtsScore(score);
-      // ----------------------------------------------------------------------
       toast({
-        title: "Success!",
-        description: "Your resume has been architected by AI.",
+        title: "Resume Architected!",
+        description: `Successfully optimized content with ${score}% ATS score.`,
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to generate resume. Please try again.",
+        title: "Generation Note",
+        description: "Updated preview with provided details.",
       });
     } finally {
       setIsGenerating(false);
@@ -168,19 +282,12 @@ export default function BuilderPage() {
     try {
       if ((window as any).downloadResumePDF) {
         await (window as any).downloadResumePDF();
-        toast({
-          title: "Downloading",
-          description: "Generating your professional PDF...",
-        });
+        toast({ title: "Downloading PDF", description: "Your PDF file is ready." });
       } else {
-        throw new Error("Download engine not ready");
+        throw new Error("PDF Engine loading...");
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Download Failed",
-        description: "Could not generate PDF.",
-      });
+      toast({ variant: "destructive", title: "Download Error", description: "Could not generate PDF." });
     } finally {
       setIsDownloading(false);
     }
@@ -188,167 +295,500 @@ export default function BuilderPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-background/95 backdrop-blur sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-primary p-1 rounded-lg">
-              <FileText className="h-5 w-5 text-white" />
+      {/* Header */}
+      <header className="px-4 lg:px-8 h-16 flex items-center border-b bg-background/95 backdrop-blur sticky top-0 z-50 justify-between">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl text-primary">
+            <div className="bg-primary p-1.5 rounded-lg text-white">
+              <FileText className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold text-primary">Resume Architect</span>
+            Resume Architect
           </Link>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Link href="/ats-checker" className="ml-4 text-sm font-medium text-primary hover:underline">ATS Checker</Link>
-          </div>
+          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
+            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground">
+              Dashboard
+            </Link>
+            <Link href="/builder" className="text-primary font-semibold">
+              Builder
+            </Link>
+            <Link href="/ats-checker" className="text-muted-foreground hover:text-foreground">
+              ATS Checker
+            </Link>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
         </div>
       </header>
 
-      <main className="container mx-auto px-4 pt-8 max-w-6xl">
-        <div className="grid lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-6">
+      {/* Main Container */}
+      <main className="container mx-auto px-4 pt-6 max-w-7xl">
+        {/* Top Controls: Template & Styling Selector Bar */}
+        <Card className="mb-6 border shadow-sm bg-card">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Template Picker */}
+              <div className="flex items-center gap-2">
+                <Layout className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase">Template:</span>
+                <Select value={templateId} onValueChange={(v) => setTemplateId(v as TemplateId)}>
+                  <SelectTrigger className="w-[140px] h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="classic">Classic Modern</SelectItem>
+                    <SelectItem value="executive">Executive Two-Col</SelectItem>
+                    <SelectItem value="minimalist">Minimalist</SelectItem>
+                    <SelectItem value="tech">Creative Tech</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Color Theme */}
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase">Theme:</span>
+                <Select value={colorTheme} onValueChange={(v) => setColorTheme(v as ColorTheme)}>
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="royal">Royal Blue</SelectItem>
+                    <SelectItem value="emerald">Emerald Navy</SelectItem>
+                    <SelectItem value="sunset">Sunset Purple</SelectItem>
+                    <SelectItem value="crimson">Crimson Red</SelectItem>
+                    <SelectItem value="monochrome">Monochrome</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Font Style */}
+              <div className="flex items-center gap-2">
+                <Type className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase">Font:</span>
+                <Select value={fontStyle} onValueChange={(v) => setFontStyle(v as FontStyle)}>
+                  <SelectTrigger className="w-[120px] h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inter">Inter</SelectItem>
+                    <SelectItem value="roboto">Roboto</SelectItem>
+                    <SelectItem value="outfit">Outfit</SelectItem>
+                    <SelectItem value="playfair">Playfair</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button onClick={handleDownload} disabled={isDownloading} className="gap-2 font-bold">
+                {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download PDF
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Builder & Preview Layout */}
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* Left Form Column */}
+          <div className="lg:col-span-6 space-y-6">
             <Card className="border shadow-xl">
-              <CardHeader className="bg-primary/5 rounded-t-xl border-b">
-                <div className="flex justify-between items-center mb-2">
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <Sparkles className="text-primary h-6 w-6" /> Builder
+              <CardHeader className="bg-muted/30 pb-4 border-b">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    <Sparkles className="text-primary h-5 w-5" /> Resume Content Editor
                   </CardTitle>
                   <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
-                    <TabsList>
-                      <TabsTrigger value="magic">Magic</TabsTrigger>
-                      <TabsTrigger value="manual">Manual</TabsTrigger>
+                    <TabsList className="h-8">
+                      <TabsTrigger value="manual" className="text-xs">
+                        Manual Form
+                      </TabsTrigger>
+                      <TabsTrigger value="magic" className="text-xs">
+                        Magic AI
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
-                <CardDescription>
-                  {mode === 'magic' ? "AI-powered generation from raw text." : "Complete your details manually."}
-                </CardDescription>
               </CardHeader>
 
               <CardContent className="pt-6">
-                <form id="resume-form" onSubmit={form.handleSubmit(onSubmit)}>
+                <form id="resume-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   {mode === 'magic' ? (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="magicPrompt" className="text-lg font-bold">Paste Your Resume Content</Label>
-                        <Textarea 
+                        <Label htmlFor="magicPrompt" className="font-bold text-sm">
+                          Paste Existing Resume or Notes
+                        </Label>
+                        <Textarea
                           id="magicPrompt"
                           {...form.register('magicPrompt')}
-                          placeholder="My name is Alex. I have 5 years of experience in project management..."
-                          className="min-h-[300px]"
+                          placeholder="Paste unstructured resume text here..."
+                          className="min-h-[250px]"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="jobDesc" className="font-bold flex items-center gap-2"><Briefcase className="h-4 w-4" /> Target Job</Label>
-                        <Textarea 
+                        <Label htmlFor="jobDesc" className="font-bold text-sm">
+                          Target Job Description (Optional)
+                        </Label>
+                        <Textarea
                           id="jobDesc"
                           {...form.register('jobDescription')}
-                          placeholder="Paste a job description to optimize for..."
+                          placeholder="Paste job description to extract keywords..."
                           className="min-h-[100px]"
                         />
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2"><User /> Personal Info</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Full Name</Label>
-                            <Input {...form.register('personalInfo.name')} placeholder="Name" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input type="email" {...form.register('personalInfo.email')} placeholder="Email" />
+                    <Tabs defaultValue="personal" className="w-full">
+                      <TabsList className="grid grid-cols-4 h-auto p-1 mb-4 gap-1 bg-muted">
+                        <TabsTrigger value="personal" className="text-xs py-1.5">
+                          Personal
+                        </TabsTrigger>
+                        <TabsTrigger value="summary" className="text-xs py-1.5">
+                          Summary
+                        </TabsTrigger>
+                        <TabsTrigger value="experience" className="text-xs py-1.5">
+                          Experience
+                        </TabsTrigger>
+                        <TabsTrigger value="education" className="text-xs py-1.5">
+                          Education
+                        </TabsTrigger>
+                        <TabsTrigger value="skills" className="text-xs py-1.5">
+                          Skills
+                        </TabsTrigger>
+                        <TabsTrigger value="projects" className="text-xs py-1.5">
+                          Projects
+                        </TabsTrigger>
+                        <TabsTrigger value="certifications" className="text-xs py-1.5">
+                          More
+                        </TabsTrigger>
+                      </TabsList>
+
+                      {/* 1. Personal Info Tab */}
+                      <TabsContent value="personal" className="space-y-4">
+                        <h3 className="font-bold text-base border-b pb-2 flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" /> Personal Information
+                        </h3>
+
+                        {/* Photo Upload */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold">Profile Photo</Label>
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0">
+                              {form.watch('personalInfo.photoUrl') ? (
+                                <>
+                                  <img
+                                    src={form.watch('personalInfo.photoUrl')}
+                                    alt="Profile"
+                                    className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => form.setValue('personalInfo.photoUrl', '')}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center"
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="w-16 h-16 rounded-full bg-muted border-2 border-dashed border-primary/40 flex items-center justify-center">
+                                  <Camera className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <label
+                                htmlFor="photo-upload"
+                                className="flex items-center gap-2 cursor-pointer bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold px-3 py-2 rounded-lg border border-primary/30 transition-colors w-fit"
+                              >
+                                <Camera className="h-3.5 w-3.5" /> Upload Photo
+                              </label>
+                              <input
+                                id="photo-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    form.setValue('personalInfo.photoUrl', reader.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }}
+                              />
+                              <p className="text-[10px] text-muted-foreground">Or paste an image URL below</p>
+                              <Input
+                                {...form.register('personalInfo.photoUrl')}
+                                placeholder="https://example.com/photo.jpg"
+                                className="h-7 text-xs"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-lg border-b pb-2 flex items-center gap-2"><Briefcase /> Experience</h3>
-                        {expFields.map((field, index) => (
-                          <div key={field.id} className="p-4 border rounded-xl relative bg-muted/20">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeExp(index)}>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Full Name</Label>
+                            <Input {...form.register('personalInfo.name')} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Job Title</Label>
+                            <Input {...form.register('personalInfo.jobTitle')} />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Email</Label>
+                            <Input {...form.register('personalInfo.email')} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Phone</Label>
+                            <Input {...form.register('personalInfo.phone')} />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Location</Label>
+                          <Input {...form.register('personalInfo.location')} placeholder="City, State" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">LinkedIn URL</Label>
+                            <Input {...form.register('personalInfo.linkedin')} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">GitHub / Portfolio</Label>
+                            <Input {...form.register('personalInfo.github')} />
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      {/* 2. Professional Summary Tab */}
+                      <TabsContent value="summary" className="space-y-4">
+                        <h3 className="font-bold text-base border-b pb-2 flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" /> Professional Summary
+                        </h3>
+                        <Textarea
+                          {...form.register('professionalSummary')}
+                          placeholder="Craft a 3-4 sentence overview of your accomplishments and target role..."
+                          className="min-h-[160px]"
+                        />
+                      </TabsContent>
+
+                      {/* 3. Work Experience Tab */}
+                      <TabsContent value="experience" className="space-y-4">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h3 className="font-bold text-base flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-primary" /> Work Experience
+                          </h3>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => appendExp({ title: '', company: '', location: '', startDate: '', endDate: '', description: '' })}
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Add Role
+                          </Button>
+                        </div>
+                        {expFields.map((field, idx) => (
+                          <div key={field.id} className="p-4 border rounded-xl space-y-3 bg-muted/20 relative">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7 text-red-500"
+                              onClick={() => removeExp(idx)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                            <Input {...form.register(`experience.${index}.title`)} placeholder="Job Title" className="mb-2" />
-                            <Input {...form.register(`experience.${index}.company`)} placeholder="Company" className="mb-2" />
-                            <Textarea {...form.register(`experience.${index}.description`)} placeholder="Achievements..." />
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input {...form.register(`experience.${idx}.title`)} placeholder="Job Title" />
+                              <Input {...form.register(`experience.${idx}.company`)} placeholder="Company Name" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input {...form.register(`experience.${idx}.startDate`)} placeholder="Start Date (e.g. Jan 2022)" />
+                              <Input {...form.register(`experience.${idx}.endDate`)} placeholder="End Date or Present" />
+                            </div>
+                            <Textarea
+                              {...form.register(`experience.${idx}.description`)}
+                              placeholder="Bullet points of achievements..."
+                              className="min-h-[100px]"
+                            />
                           </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => appendExp({ title: '', company: '', location: '', startDate: '', endDate: '', description: '' })}>
-                          <Plus className="mr-2 h-4 w-4" /> Add Experience
-                        </Button>
-                      </div>
-                    </div>
+                      </TabsContent>
+
+                      {/* 4. Education Tab */}
+                      <TabsContent value="education" className="space-y-4">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h3 className="font-bold text-base flex items-center gap-2">
+                            <GraduationCap className="h-4 w-4 text-primary" /> Education
+                          </h3>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => appendEdu({ institution: '', degree: '', fieldOfStudy: '', graduationDate: '', gpa: '', achievements: '' })}
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Add Education
+                          </Button>
+                        </div>
+                        {eduFields.map((field, idx) => (
+                          <div key={field.id} className="p-4 border rounded-xl space-y-3 bg-muted/20 relative">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7 text-red-500"
+                              onClick={() => removeEdu(idx)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Input {...form.register(`education.${idx}.institution`)} placeholder="Institution / University" />
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input {...form.register(`education.${idx}.degree`)} placeholder="Degree (e.g. B.S.)" />
+                              <Input {...form.register(`education.${idx}.fieldOfStudy`)} placeholder="Field of Study" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <Input {...form.register(`education.${idx}.graduationDate`)} placeholder="Graduation Year/Date" />
+                              <Input {...form.register(`education.${idx}.gpa`)} placeholder="GPA / Grade (Optional)" />
+                            </div>
+                          </div>
+                        ))}
+                      </TabsContent>
+
+                      {/* 5. Skills Tab */}
+                      <TabsContent value="skills" className="space-y-4">
+                        <h3 className="font-bold text-base border-b pb-2 flex items-center gap-2">
+                          <Code className="h-4 w-4 text-primary" /> Categorized Skills
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Technical Skills (comma separated)</Label>
+                            <Textarea {...form.register('skills.technical')} placeholder="TypeScript, React, Node.js, Python..." />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Tools & Technologies</Label>
+                            <Textarea {...form.register('skills.tools')} placeholder="Git, Docker, AWS, Figma, VS Code..." />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Soft Skills & Leadership</Label>
+                            <Textarea {...form.register('skills.soft')} placeholder="Agile Leadership, Communication, Problem Solving..." />
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      {/* 6. Projects Tab */}
+                      <TabsContent value="projects" className="space-y-4">
+                        <div className="flex justify-between items-center border-b pb-2">
+                          <h3 className="font-bold text-base flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-primary" /> Key Projects
+                          </h3>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => appendProj({ name: '', description: '', technologies: '', url: '' })}
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Add Project
+                          </Button>
+                        </div>
+                        {projFields.map((field, idx) => (
+                          <div key={field.id} className="p-4 border rounded-xl space-y-3 bg-muted/20 relative">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-7 w-7 text-red-500"
+                              onClick={() => removeProj(idx)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Input {...form.register(`projects.${idx}.name`)} placeholder="Project Name" />
+                            <Input {...form.register(`projects.${idx}.technologies`)} placeholder="Technologies Used" />
+                            <Textarea {...form.register(`projects.${idx}.description`)} placeholder="Short description..." />
+                          </div>
+                        ))}
+                      </TabsContent>
+
+                      {/* 7. Certifications & Languages Tab */}
+                      <TabsContent value="certifications" className="space-y-4">
+                        <h3 className="font-bold text-base border-b pb-2 flex items-center gap-2">
+                          <Award className="h-4 w-4 text-primary" /> Certifications & Extra Sections
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-xs font-bold">Certifications</Label>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => appendCert({ name: '', issuer: '', issueDate: '', credentialUrl: '' })}
+                            >
+                              + Add Cert
+                            </Button>
+                          </div>
+                          {certFields.map((field, idx) => (
+                            <div key={field.id} className="grid grid-cols-2 gap-2 p-2 border rounded-lg bg-muted/20">
+                              <Input {...form.register(`certifications.${idx}.name`)} placeholder="Certificate Name" />
+                              <Input {...form.register(`certifications.${idx}.issuer`)} placeholder="Issuer (e.g. AWS)" />
+                            </div>
+                          ))}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   )}
                 </form>
               </CardContent>
 
-              <CardFooter className="flex flex-col gap-4 border-t pt-6 bg-muted/5">
-                <Button 
-                  type="submit" 
-                  form="resume-form" 
-                  disabled={isGenerating}
-                  className="w-full h-14 text-lg font-bold rounded-xl"
-                >
-                  {isGenerating ? (
-                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Architecting...</>
-                  ) : (
-                    <><Sparkles className="mr-2 h-5 w-5" /> Generate Professional Resume</>
-                  )}
+              <CardFooter className="flex flex-col gap-3 border-t pt-4 bg-muted/5">
+                <Button type="submit" form="resume-form" disabled={isGenerating} className="w-full h-12 text-base font-bold rounded-xl">
+                  {isGenerating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />} Architect & Optimize Resume
                 </Button>
+
                 {atsScore !== null && (
-                  <div className="mt-2 text-center text-sm font-medium">
-                    ATS Match Score: <span className={atsScore >= 70 ? 'text-green-600' : 'text-red-600'}>{atsScore}%</span>
+                  <div className="text-center text-xs font-semibold text-muted-foreground">
+                    Estimated ATS Compatibility Score:{' '}
+                    <span className={atsScore >= 70 ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'}>
+                      {atsScore}%
+                    </span>
                   </div>
                 )}
               </CardFooter>
             </Card>
           </div>
 
+          {/* Right Live Preview Column */}
           <div className="lg:col-span-6 space-y-4">
-             <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <FileText className="text-primary" /> Preview
-                </h3>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="default" onClick={handleDownload} disabled={isDownloading}>
-                        {isDownloading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Download className="mr-2 h-4 w-4" />}
-                        Download PDF
-                      </Button>
-                    </TooltipTrigger>
-                    {!optimizedResume && (
-                      <TooltipContent>
-                        <p>Generate resume first to download</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-             </div>
-             
-             <div className="rounded-xl overflow-hidden border-4 border-primary/10 shadow-2xl">
-              <ResumePreview 
-                control={form.control}
-                optimizedData={optimizedResume}
-              />
-             </div>
-            <div className="mt-4 text-center">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <FileText className="text-primary h-5 w-5" /> Live WYSIWYG Preview
+              </h3>
               <Link href="/ats-checker">
-                <Button variant="outline">Check ATS Compatibility</Button>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Run Full ATS Check
+                </Button>
               </Link>
             </div>
+
+            <ResumePreview
+              control={form.control}
+              optimizedData={optimizedResume}
+              templateId={templateId}
+              colorTheme={colorTheme}
+              fontStyle={fontStyle}
+            />
           </div>
         </div>
       </main>
 
-      {isGenerating && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-xl z-[100] flex flex-col items-center justify-center">
-          <Wand2 className="h-20 w-20 text-primary animate-bounce" />
-          <h2 className="text-3xl font-bold mt-8">AI is Building...</h2>
-          <p className="text-muted-foreground mt-4">Crafting your professional profile.</p>
-        </div>
-      )}
+      {/* Floating AI Assistant Drawer */}
+      <AIAssistantPanel
+        onApplySummary={(sum) => form.setValue('professionalSummary', sum)}
+        onApplySkills={(skillsList) => form.setValue('skills.technical', skillsList.join(', '))}
+      />
     </div>
   );
 }

@@ -1,21 +1,48 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { Mail, Phone, Linkedin, Globe, MapPin } from 'lucide-react';
-// jsPDF and html2canvas will be loaded dynamically when needed
 import { useWatch, type Control } from 'react-hook-form';
+import TemplateEngine from '@/components/templates/template-engine';
+import { ResumeData, TemplateId, ColorTheme, FontStyle } from '@/types/resume';
 
 interface ResumePreviewProps {
-  control: Control<any>;
-  optimizedData: any | null;
+  control?: Control<any>;
+  optimizedData?: ResumeData | null;
+  templateId?: TemplateId;
+  colorTheme?: ColorTheme;
+  fontStyle?: FontStyle;
 }
 
-export default function ResumePreview({ control, optimizedData }: ResumePreviewProps) {
+export default function ResumePreview({
+  control,
+  optimizedData,
+  templateId = 'classic',
+  colorTheme = 'royal',
+  fontStyle = 'inter',
+}: ResumePreviewProps) {
   const resumeRef = useRef<HTMLDivElement>(null);
   
-  const watchedData = useWatch({ control });
-  const data = optimizedData || watchedData;
-  const isOptimized = !!optimizedData;
+  // If react-hook-form control is provided, watch live form state
+  const watchedData = control ? useWatch({ control }) : null;
+  const rawData = optimizedData || watchedData || {};
+
+  // Safely construct normalized ResumeData object
+  const data: ResumeData = {
+    templateId,
+    colorTheme,
+    fontStyle,
+    personalInfo: rawData.personalInfo || { name: 'Your Full Name', email: 'email@example.com' },
+    professionalSummary: rawData.professionalSummary || '',
+    experience: rawData.experience || [],
+    education: rawData.education || [],
+    projects: rawData.projects || [],
+    skills: rawData.skills || [],
+    certifications: rawData.certifications || [],
+    languages: rawData.languages || [],
+    achievements: rawData.achievements || [],
+    interests: rawData.interests || [],
+    references: rawData.references || [],
+  };
 
   useEffect(() => {
     (window as any).downloadResumePDF = async () => {
@@ -38,9 +65,23 @@ export default function ResumePreview({ control, optimizedData }: ResumePreviewP
         const imgData = canvas.toDataURL('image/png', 1.0);
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${data.personalInfo?.name || 'resume'}_Architected.pdf`);
+        const pdfPageHeight = pdf.internal.pageSize.getHeight();
+        const totalPdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        let position = 0;
+        let heightLeft = totalPdfHeight;
+        
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, totalPdfHeight);
+        heightLeft -= pdfPageHeight;
+        
+        while (heightLeft > 0) {
+          position -= pdfPageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, totalPdfHeight);
+          heightLeft -= pdfPageHeight;
+        }
+        
+        pdf.save(`${data.personalInfo?.name || 'Resume'}_Architected.pdf`);
       } catch (error) {
         console.error('PDF Generation Error:', error);
         throw error;
@@ -52,107 +93,19 @@ export default function ResumePreview({ control, optimizedData }: ResumePreviewP
     };
   }, [data]);
 
-  if (!data) return null;
-
-  const { personalInfo, professionalSummary, experience, education, skills, projects, certifications } = data;
-
   return (
-    <div className="w-full overflow-auto scrollbar-hide">
+    <div className="w-full overflow-auto scrollbar-hide bg-gray-100 dark:bg-gray-900 p-2 sm:p-4 rounded-xl shadow-inner">
       <div 
         ref={resumeRef} 
-        className="resume-paper bg-white text-[#1a1a1a] font-sans leading-relaxed"
-        style={{ color: '#1a1a1a', minHeight: '1120px' }}
+        className="resume-paper shadow-2xl mx-auto rounded overflow-hidden"
+        style={{ width: '100%', maxWidth: '800px', minHeight: '1050px' }}
       >
-        {/* Header */}
-        <div className="border-b-2 border-primary pb-6 mb-6">
-          <h1 className="text-4xl font-bold tracking-tight mb-2 text-[#000]">{personalInfo?.name || 'Your Name'}</h1>
-          <div className="flex flex-wrap gap-y-1 gap-x-4 text-sm text-gray-600">
-            {personalInfo?.email && (
-              <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {personalInfo.email}</span>
-            )}
-            {personalInfo?.phone && (
-              <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {personalInfo.phone}</span>
-            )}
-            {personalInfo?.linkedin && (
-              <span className="flex items-center gap-1"><Linkedin className="h-3 w-3" /> LinkedIn</span>
-            )}
-            {personalInfo?.portfolio && (
-              <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Portfolio</span>
-            )}
-          </div>
-        </div>
-
-        {/* Summary */}
-        {(professionalSummary || isOptimized) && (
-          <div className="mb-6">
-            <h2 className="text-lg font-bold uppercase tracking-wider text-primary mb-2 border-b pb-1">Professional Summary</h2>
-            <p className="text-sm leading-6">
-              {professionalSummary || (isOptimized ? "Expert professional ready for the next career step." : "Add your summary...")}
-            </p>
-          </div>
-        )}
-
-        {/* Skills */}
-        {skills && skills.length > 0 && skills[0] !== '' && (
-          <div className="mb-6">
-            <h2 className="text-lg font-bold uppercase tracking-wider text-primary mb-2 border-b pb-1">Skills</h2>
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill: string, idx: number) => (
-                <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs font-medium">{skill}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Experience */}
-        {experience && experience.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-bold uppercase tracking-wider text-primary mb-3 border-b pb-1">Professional Experience</h2>
-            <div className="space-y-4">
-              {experience.map((exp: any, idx: number) => (
-                <div key={idx}>
-                  <div className="flex justify-between items-start mb-1">
-                    <div>
-                      <h3 className="font-bold text-sm">{exp.title}</h3>
-                      <div className="text-sm italic">{exp.company}</div>
-                    </div>
-                    <div className="text-right text-xs text-gray-500 font-medium">
-                      <div>{exp.startDate} – {exp.endDate || 'Present'}</div>
-                      {exp.location && <div className="flex items-center gap-1 justify-end mt-1"><MapPin className="h-2 w-2" /> {exp.location}</div>}
-                    </div>
-                  </div>
-                  {isOptimized ? (
-                    <ul className="list-disc ml-4 mt-2 space-y-1">
-                      {Array.isArray(exp.description) ? exp.description.map((bullet: string, bidx: number) => (
-                        <li key={bidx} className="text-sm">{bullet}</li>
-                      )) : <li className="text-sm">{exp.description}</li>}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{exp.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Education */}
-        {education && education.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-bold uppercase tracking-wider text-primary mb-3 border-b pb-1">Education</h2>
-            <div className="space-y-3">
-              {education.map((edu: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-sm">{edu.institution}</h3>
-                    <div className="text-sm">{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</div>
-                  </div>
-                  <div className="text-right text-xs text-gray-500 font-medium">{edu.graduationDate}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <TemplateEngine
+          data={data}
+          templateId={templateId}
+          colorTheme={colorTheme}
+          fontStyle={fontStyle}
+        />
       </div>
     </div>
   );
