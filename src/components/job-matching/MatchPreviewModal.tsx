@@ -14,6 +14,8 @@ interface MatchPreviewModalProps {
   resumeText: string;
   resumeData?: any;
   matchScore: number;
+  jobDescription?: string;
+  jobListing?: any;
 }
 
 export function MatchPreviewModal({
@@ -24,14 +26,49 @@ export function MatchPreviewModal({
   resumeText,
   resumeData,
   matchScore,
+  jobDescription,
+  jobListing,
 }: MatchPreviewModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const extractCompanyEmail = (text: string): string => {
+    const companyEmailPatterns = [
+      /careers@[\w.-]+\.[a-z]{2,}/gi,
+      /jobs@[\w.-]+\.[a-z]{2,}/gi,
+      /hr@[\w.-]+\.[a-z]{2,}/gi,
+      /recruiting@[\w.-]+\.[a-z]{2,}/gi,
+      /recruitment@[\w.-]+\.[a-z]{2,}/gi,
+      /talent@[\w.-]+\.[a-z]{2,}/gi,
+      /hiring@[\w.-]+\.[a-z]{2,}/gi,
+      /apply@[\w.-]+\.[a-z]{2,}/gi,
+      /people@[\w.-]+\.[a-z]{2,}/gi,
+    ];
+
+    for (const pattern of companyEmailPatterns) {
+      const matches = text.match(pattern);
+      if (matches && matches.length > 0) {
+        return matches[0];
+      }
+    }
+
+    const emailRegex = /[a-zA-Z0-9._%+-]+@(?!gmail|yahoo|hotmail|outlook|aol|icloud|protonmail)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi;
+    const matches = text.match(emailRegex);
+    return matches && matches.length > 0 ? matches[0] : 'careers@company.com';
+  };
 
   const [targetEmail, setTargetEmail] = useState('careers@company.com');
   const [senderEmail, setSenderEmail] = useState(user?.email || 'myaccount@example.com');
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchResult, setDispatchResult] = useState<{ success: boolean; message: string; coverNote?: string } | null>(null);
+
+  // Auto-extract company email when modal opens or job description changes
+  React.useEffect(() => {
+    if (isOpen && jobDescription) {
+      const extractedEmail = extractCompanyEmail(jobDescription);
+      setTargetEmail(extractedEmail);
+    }
+  }, [isOpen, jobDescription]);
 
   const handleDispatch = async () => {
     if (!user) return;
@@ -39,7 +76,7 @@ export function MatchPreviewModal({
     setIsDispatching(true);
     setDispatchResult(null);
     try {
-      const res = await fetch('/api/applications/dispatch', {
+      const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,6 +85,7 @@ export function MatchPreviewModal({
           resumeText,
           resumeData,
           jobListingId,
+          jobListing,
           targetEmail: targetEmail.trim(),
           senderEmail: senderEmail.trim(),
           matchScore,

@@ -179,47 +179,81 @@ export async function POST(req: Request) {
 
     // 7. Send actual email if email service is configured
     console.log('[Dispatch] Checking email service configuration...');
+    console.log('[Dispatch] RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
+    console.log('[Dispatch] targetEmail:', targetEmail);
+    console.log('[Dispatch] senderEmail:', senderEmail);
+    
     let emailSent = false;
     let emailError: string | undefined;
     
     if (process.env.RESEND_API_KEY && targetEmail && senderEmail) {
       try {
         console.log('[Dispatch] Sending email via Resend...');
+        console.log('[Dispatch] Email payload:', {
+          from: senderEmail,
+          to: targetEmail,
+          subject: `Job Application - ${senderEmail}`,
+          hasCoverNote: !!tailoredContent.coverNote,
+          hasResumeHtml: !!resumeHtml
+        });
+        
+        const emailPayload = {
+          from: senderEmail,
+          to: targetEmail,
+          subject: `Job Application - ${senderEmail}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Job Application</h2>
+              <p>${tailoredContent.coverNote}</p>
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+              ${resumeHtml || '<p><strong>Resume attached separately.</strong></p>'}
+            </div>
+          `,
+        };
+        
+        console.log('[Dispatch] Making fetch request to Resend API...');
         const emailRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            from: senderEmail,
-            to: targetEmail,
-            subject: `Job Application - ${senderEmail}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #333;">Job Application</h2>
-                <p>${tailoredContent.coverNote}</p>
-                <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
-                ${resumeHtml || '<p><strong>Resume attached separately.</strong></p>'}
-              </div>
-            `,
-          }),
+          body: JSON.stringify(emailPayload),
         });
+        
+        console.log('[Dispatch] Email response status:', emailRes.status);
         
         if (emailRes.ok) {
           emailSent = true;
           console.log('[Dispatch] Email sent successfully via Resend');
         } else {
-          const errorData = await emailRes.json();
-          emailError = errorData.message || 'Email service error';
-          console.warn('[Dispatch] Email send failed:', emailError);
+          const errorText = await emailRes.text();
+          console.error('[Dispatch] Email send failed - Status:', emailRes.status);
+          console.error('[Dispatch] Error response text:', errorText);
+          try {
+            const errorData = JSON.parse(errorText);
+            emailError = errorData.message || errorData.error || 'Email service error';
+            console.error('[Dispatch] Parsed error:', errorData);
+          } catch {
+            emailError = errorText || 'Email service error';
+          }
         }
       } catch (err) {
         emailError = err instanceof Error ? err.message : 'Email service error';
-        console.warn('[Dispatch] Email send error:', emailError);
+        console.error('[Dispatch] Email send error:', emailError);
+        console.error('[Dispatch] Error stack:', err instanceof Error ? err.stack : 'No stack');
       }
     } else {
       console.log('[Dispatch] Email service not configured or missing email addresses, using simulation');
+      if (!process.env.RESEND_API_KEY) {
+        console.warn('[Dispatch] RESEND_API_KEY is not set in environment variables');
+      }
+      if (!targetEmail) {
+        console.warn('[Dispatch] targetEmail is missing');
+      }
+      if (!senderEmail) {
+        console.warn('[Dispatch] senderEmail is missing');
+      }
     }
 
     // 8. Update status based on email result or simulation

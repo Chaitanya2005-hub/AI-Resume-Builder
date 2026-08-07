@@ -289,7 +289,7 @@ export default function JobMatchingPage() {
       }
 
       console.log('[Auto-Apply] Calling dispatch API...');
-      const res = await fetch('/api/applications/dispatch', {
+      const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -298,6 +298,7 @@ export default function JobMatchingPage() {
           resumeText: `Title: ${bestMatch.resume.title}\nTarget Role: ${bestMatch.resume.targetRole}`,
           resumeData,
           jobListingId: jobListing.id,
+          jobListing: jobListing,
           targetEmail,
           senderEmail: senderEmail.trim(),
           matchScore: bestMatch.matchScore,
@@ -663,6 +664,8 @@ export default function JobMatchingPage() {
           resumeText={`Title: ${selectedMatch.resume.title}\nTarget Role: ${selectedMatch.resume.targetRole}`}
           resumeData={selectedMatch.resumeData}
           matchScore={selectedMatch.matchScore}
+          jobDescription={parsedJob?.originalText}
+          jobListing={parsedJob}
         />
       )}
     </DashboardLayout>
