@@ -43,3 +43,8 @@ Since this app is built in a cloud environment, you need to manually push the co
 - **UI**: React, Tailwind CSS, ShadCN UI
 - **AI**: Genkit, Gemini 1.5 Flash
 - **PDF Generation**: html2canvas, jsPDF
+
+## Roles
+- **UI Designing** : V. Nikhil Kumar
+- **Frontend And Backend** : K. Sri Chaitanya
+- **AI Integration** : S. Dhanu
